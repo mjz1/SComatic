@@ -53,6 +53,7 @@ process SPLITBAM {
 // TODO: The basecounts step can be split out per cell type rather than in a loop
 
 process BASECOUNTS_SPLIT {
+    label 'multicore'
     publishDir path: params.outdir, mode:'copy', overwrite: true
     tag "Sample: $sampleid; BAM: $bam"
 
@@ -92,6 +93,7 @@ process BASECOUNTS_SPLIT {
 
 
 process MERGECOUNTS {
+    label 'multicore'
     publishDir path: params.outdir, mode:'copy'
 
     tag "Sample: $sampleid"
@@ -214,6 +216,7 @@ process CALLABLE_PERCT {
 }
 
 process GENOTYPE_CELLS {
+    label 'multicore'
     publishDir path: params.outdir, mode:'copy'
     tag "Sample: $sampleid; BAM: $bam"
 
