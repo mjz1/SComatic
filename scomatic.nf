@@ -3,17 +3,6 @@
 // Declare syntax version
 nextflow.enable.dsl=2
 
-/*
- * pipeline input parameters
- */
-params.scomatic = "/scomatic"
-params.outdir = "results"
-params.ref = "$projectDir/example_data/chr10.fa"
-params.bam = "$projectDir/example_data/Example.scrnaseq.bam"
-params.bai = "$projectDir/example_data/Example.scrnaseq.bam.bai"
-params.meta =  "$projectDir/example_data/Example.cell_barcode_annotations.tsv"
-params.sampleid = "Example"
-
 
 log.info """\
     S C O M A T I C - N F   P I P E L I N E
@@ -41,7 +30,9 @@ process SPLITBAM {
         // val sampleid
         // path "${sampleid}/Step1_BamCellTypes"
         // path ("${sampleid}/Step1_BamCellTypes/*.bam")
-        tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/*.bam"), path("${sampleid}/Step1_BamCellTypes/*.bai")
+        // tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/*.bam"), path("${sampleid}/Step1_BamCellTypes/*.bai")
+        tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/*.bam"), path("${sampleid}/Step1_BamCellTypes/*.bai"), path("${sampleid}/Step1_BamCellTypes/")
+        // tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/")
 
         script:
         """
@@ -62,13 +53,12 @@ process SPLITBAM {
 // TODO: The basecounts step can be split out per cell type rather than in a loop
 
 process BASECOUNTS_SPLIT {
-    cpus 8
     publishDir path: params.outdir, mode:'copy', overwrite: true
     tag "Sample: $sampleid; BAM: $bam"
 
     input:
         path ref
-        tuple val(sampleid), path(bam), path(bai)
+        tuple val(sampleid), path(bam), path(bai), path(outdir1)
 
     output:
         tuple val(sampleid), path ("${sampleid}/Step2_BaseCellCounts/*.tsv"), optional: true
@@ -192,13 +182,12 @@ process CALLABLESITES {
 
 
 process CALLABLE_PERCT {
-    cpus 8
     publishDir path: params.outdir, mode:'copy'
     tag "Sample: $sampleid; BAM: $bam"
 
     input:
         path ref 
-        tuple val(sampleid), path(bam), path(bai), path(outdir4)
+        tuple val(sampleid), path(bam), path(bai), path(outdir1), path(outdir4)
 
     output:
         path("${sampleid}/Step6_UniqueCellCallableSites/*.tsv"), optional: true
@@ -225,13 +214,12 @@ process CALLABLE_PERCT {
 }
 
 process GENOTYPE_CELLS {
-    cpus 8
     publishDir path: params.outdir, mode:'copy'
     tag "Sample: $sampleid; BAM: $bam"
 
     input:
         path ref
-        tuple val(sampleid), path(bam), path(bai), path(outdir4), path(meta)
+        tuple val(sampleid), path(bam), path(bai), path(outdir1), path(outdir4), path(meta)
 
     output:
         path("${sampleid}/Step7_SingleCellAlleles/*.tsv"), optional: true
