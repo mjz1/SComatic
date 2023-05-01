@@ -8,6 +8,7 @@ log.info """\
     S C O M A T I C - N F   P I P E L I N E
     ===================================
     scomatic    : ${params.scomatic}
+    reference   : ${params.ref}
     outdir      : ${params.outdir}
     bam         : ${params.bam}
     metadata    : ${params.meta}
@@ -256,6 +257,7 @@ workflow {
     bai_ch = Channel.fromPath(params.bai, checkIfExists: true)
     meta_ch = Channel.fromPath(params.meta, checkIfExists: true)
     sampleid_ch = Channel.from(params.sampleid)
+    
 
     // Bind meta channel to sample ids
     samplemeta_ch = sampleid_ch.combine(meta_ch)
