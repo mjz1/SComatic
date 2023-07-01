@@ -4,46 +4,46 @@
 nextflow.enable.dsl=2
 
 
+params.csv = null
+params.ref = null
+params.bam = null
+params.meta = null
+params.sample_id = null
+params.outdir = "./output"
+
 log.info """\
     S C O M A T I C - N F   P I P E L I N E
     ===================================
-    scomatic    : ${params.scomatic}
+    input_csv   : ${params.csv}
     reference   : ${params.ref}
     outdir      : ${params.outdir}
     bam         : ${params.bam}
     metadata    : ${params.meta}
-    sampleid    : ${params.sampleid}
+    sample_id    : ${params.sample_id}
     """
     .stripIndent()
 
 
 process SPLITBAM {
-    tag "Sample: $sampleid"
+    tag "Sample: $sample_id"
 
     publishDir params.outdir, mode:'copy'
 
     input:
-        tuple val(sampleid), path(meta)
-        path bam
-        path bai
+        tuple val(sample_id), path(bam), path(bai), path(meta)
 
     output:
-        // val sampleid
-        // path "${sampleid}/Step1_BamCellTypes"
-        // path ("${sampleid}/Step1_BamCellTypes/*.bam")
-        // tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/*.bam"), path("${sampleid}/Step1_BamCellTypes/*.bai")
-        tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/*.bam"), path("${sampleid}/Step1_BamCellTypes/*.bai"), path("${sampleid}/Step1_BamCellTypes/")
-        // tuple val(sampleid), path("${sampleid}/Step1_BamCellTypes/")
+        tuple val(sample_id), path("${sample_id}/Step1_BamCellTypes/*.bam"), path("${sample_id}/Step1_BamCellTypes/*.bai"), path("${sample_id}/Step1_BamCellTypes/")
 
         script:
         """
-        outdir="${sampleid}/Step1_BamCellTypes"
+        outdir="${sample_id}/Step1_BamCellTypes"
 
         mkdir -p \${outdir}
         python /scomatic/scripts/SplitBam/SplitBamCellTypes.py \
             --bam $bam \
             --meta $meta \
-            --id $sampleid \
+            --id $sample_id \
             --n_trim 5 \
             --max_nM 5 \
             --max_NH 1 \
@@ -51,32 +51,27 @@ process SPLITBAM {
         """
 }
 
-// TODO: The basecounts step can be split out per cell type rather than in a loop
-
 process BASECOUNTS_SPLIT {
     label 'multicore'
     publishDir path: params.outdir, mode:'copy', overwrite: true
-    tag "Sample: $sampleid; BAM: $bam"
+    tag "Sample: $sample_id; BAM: $bam"
 
     input:
         path ref
-        tuple val(sampleid), path(bam), path(bai), path(outdir1)
+        tuple val(sample_id), path(bam), path(bai), path(outdir1)
 
     output:
-        tuple val(sampleid), path ("${sampleid}/Step2_BaseCellCounts/*.tsv"), optional: true
-        // path ("${sampleid}/Step2_BaseCellCounts/*.tsv"), optional: true
-        // val "${sampleid}/Step2_BaseCellCounts/", emit: step2_dir
-        // val sampleid
+        tuple val(sample_id), path ("${sample_id}/Step2_BaseCellCounts/*.tsv"), optional: true
 
     script:
         """
-        outdir="${sampleid}/Step2_BaseCellCounts"
+        outdir="${sample_id}/Step2_BaseCellCounts"
         mkdir -p \${outdir}
 
         cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
 
         # Temp folder
-        temp="${sampleid}/Step2_BaseCellCounts/temp_\${cell_type}"
+        temp="${sample_id}/Step2_BaseCellCounts/temp_\${cell_type}"
         mkdir -p \$temp
 
         # Command line to submit to cluster
@@ -97,17 +92,17 @@ process MERGECOUNTS {
     label 'multicore'
     publishDir path: params.outdir, mode:'copy'
 
-    tag "Sample: $sampleid"
+    tag "Sample: $sample_id"
 
     input:
-        tuple val(sampleid), path(tsvs)
+        tuple val(sample_id), path(tsvs)
 
     output:
-        tuple val(sampleid), path("${sampleid}/Step3_BaseCellCountsMerged/")
+        tuple val(sample_id), path("${sample_id}/Step3_BaseCellCountsMerged/")
 
     script:
         """
-        output_dir3=${sampleid}/Step3_BaseCellCountsMerged
+        output_dir3=${sample_id}/Step3_BaseCellCountsMerged
         mkdir -p \$output_dir3
 
         # Create a tempdir with each sample tsvs
@@ -116,7 +111,7 @@ process MERGECOUNTS {
 
 
         python /scomatic/scripts/MergeCounts/MergeBaseCellCounts.py --tsv_folder temp/ \
-        --outfile \${output_dir3}/${sampleid}.BaseCellCounts.AllCellTypes.tsv
+        --outfile \${output_dir3}/${sample_id}.BaseCellCounts.AllCellTypes.tsv
 
         rm -rf temp/
         """
@@ -125,24 +120,24 @@ process MERGECOUNTS {
 
 process VARIANTCALLING {
     publishDir path: params.outdir, mode:'copy'
-    tag "Sample: $sampleid"
+    tag "Sample: $sample_id"
 
     input:
         path ref
-        tuple val(sampleid), path(outdir3)
+        tuple val(sample_id), path(outdir3)
 
     output:
-        tuple val(sampleid), path("${sampleid}/Step4_VariantCalling/")
+        tuple val(sample_id), path("${sample_id}/Step4_VariantCalling/")
 
     script:
         """
         # Step 4.1
-        output_dir4=${sampleid}/Step4_VariantCalling
+        output_dir4=${sample_id}/Step4_VariantCalling
         mkdir -p \$output_dir4
 
         python /scomatic/scripts/BaseCellCalling/BaseCellCalling.step1.py \
-                --infile ${outdir3}/${sampleid}.BaseCellCounts.AllCellTypes.tsv \
-                --outfile \${output_dir4}/${sampleid} \
+                --infile ${outdir3}/${sample_id}.BaseCellCounts.AllCellTypes.tsv \
+                --outfile \${output_dir4}/${sample_id} \
                 --ref $ref
 
         # Step 4.2
@@ -150,35 +145,35 @@ process VARIANTCALLING {
         PON=/scomatic/PoNs/PoN.scRNAseq.hg38.tsv
 
         python /scomatic/scripts/BaseCellCalling/BaseCellCalling.step2.py \
-                --infile \${output_dir4}/${sampleid}.calling.step1.tsv \
-                --outfile \${output_dir4}/${sampleid} \
+                --infile \${output_dir4}/${sample_id}.calling.step1.tsv \
+                --outfile \${output_dir4}/${sample_id} \
                 --editing \$editing \
                 --pon \$PON
 
 
-        bedtools intersect -header -a \${output_dir4}/${sampleid}.calling.step2.tsv \
-            -b /scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed | awk '\$1 ~ /^#/ || \$6 == "PASS"' > \${output_dir4}/${sampleid}.calling.step2.pass.tsv
+        bedtools intersect -header -a \${output_dir4}/${sample_id}.calling.step2.tsv \
+            -b /scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed | awk '\$1 ~ /^#/ || \$6 == "PASS"' > \${output_dir4}/${sample_id}.calling.step2.pass.tsv
         """
 }
 
 process CALLABLESITES {
     publishDir path: params.outdir, mode:'copy'
-    tag "Sample: $sampleid"
+    tag "Sample: $sample_id"
 
     input:
-        tuple val(sampleid), path(outdir4)
+        tuple val(sample_id), path(outdir4)
 
     output:
-        tuple val(sampleid), path("${sampleid}/Step5_CellTypeCallableSites/")
+        tuple val(sample_id), path("${sample_id}/Step5_CellTypeCallableSites/")
 
     script:
         """
         # Computing the number of callable sites per cell type
-        output_dir5=${sampleid}/Step5_CellTypeCallableSites
+        output_dir5=${sample_id}/Step5_CellTypeCallableSites
         mkdir -p \$output_dir5
 
-        python /scomatic/scripts/GetCallableSites/GetAllCallableSites.py --infile ${outdir4}/${sampleid}.calling.step1.tsv  \
-            --outfile \$output_dir5/${sampleid} \
+        python /scomatic/scripts/GetCallableSites/GetAllCallableSites.py --infile ${outdir4}/${sample_id}.calling.step1.tsv  \
+            --outfile \$output_dir5/${sample_id} \
             --max_cov 150 --min_cell_types 2
    """
 }
@@ -186,20 +181,20 @@ process CALLABLESITES {
 
 process CALLABLE_PERCT {
     publishDir path: params.outdir, mode:'copy'
-    tag "Sample: $sampleid; BAM: $bam"
+    tag "Sample: $sample_id; BAM: $bam"
 
     input:
         path ref 
-        tuple val(sampleid), path(bam), path(bai), path(outdir1), path(outdir4)
+        tuple val(sample_id), path(bam), path(bai), path(outdir1), path(outdir4)
 
     output:
-        path("${sampleid}/Step6_UniqueCellCallableSites/*.tsv"), optional: true
+        path("${sample_id}/Step6_UniqueCellCallableSites/*.tsv"), optional: true
 
     script:
         """
-        STEP4_1=$outdir4/${sampleid}.calling.step1.tsv
+        STEP4_1=$outdir4/${sample_id}.calling.step1.tsv
 
-        output_dir6=${sampleid}/Step6_UniqueCellCallableSites
+        output_dir6=${sample_id}/Step6_UniqueCellCallableSites
         mkdir -p \$output_dir6
 
         cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
@@ -209,7 +204,7 @@ process CALLABLE_PERCT {
         mkdir -p \$temp
 
         python /scomatic/scripts/SitesPerCell/SitesPerCell.py --bam $bam    \
-            --infile $outdir4/${sampleid}.calling.step1.tsv   \
+            --infile $outdir4/${sample_id}.calling.step1.tsv   \
             --ref $ref \
             --out_folder \$output_dir6 --tmp_dir \$temp --nprocs $task.cpus
         echo
@@ -219,20 +214,20 @@ process CALLABLE_PERCT {
 process GENOTYPE_CELLS {
     label 'multicore'
     publishDir path: params.outdir, mode:'copy'
-    tag "Sample: $sampleid; BAM: $bam"
+    tag "Sample: $sample_id; BAM: $bam"
 
     input:
         path ref
-        tuple val(sampleid), path(bam), path(bai), path(outdir1), path(outdir4), path(meta)
+        tuple val(sample_id), path(bam), path(bai), path(outdir1), path(outdir4), path(meta)
 
     output:
-        path("${sampleid}/Step7_SingleCellAlleles/*.tsv"), optional: true
+        path("${sample_id}/Step7_SingleCellAlleles/*.tsv"), optional: true
 
     script:
         """
-        STEP4_2_pass=${outdir4}/${sampleid}.calling.step2.pass.tsv
+        STEP4_2_pass=${outdir4}/${sample_id}.calling.step2.pass.tsv
 
-        output_dir7=${sampleid}/Step7_SingleCellAlleles
+        output_dir7=${sample_id}/Step7_SingleCellAlleles
         mkdir -p \$output_dir7
 
         cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
@@ -253,16 +248,20 @@ process GENOTYPE_CELLS {
 }
 
 workflow {
-    bam_ch = Channel.fromPath(params.bam, checkIfExists: true)
-    bai_ch = Channel.fromPath(params.bai, checkIfExists: true)
-    meta_ch = Channel.fromPath(params.meta, checkIfExists: true)
-    sampleid_ch = Channel.from(params.sampleid)
-    
 
-    // Bind meta channel to sample ids
-    samplemeta_ch = sampleid_ch.combine(meta_ch)
-    
-    splitbam_outch = SPLITBAM(samplemeta_ch, bam_ch, bai_ch)
+    if (params.csv) {
+        input_ch = Channel.fromPath(params.csv).
+            splitCsv(header:true).
+            map(row -> tuple "${row.sample_id}", "${row.bam}", "${row.bai}", "${row.metadata}")
+    } else {        
+        input_ch = Channel.from(params.sample_id).
+            merge(Channel.fromPath(params.bam, checkIfExists: true)).
+            merge(Channel.fromPath(params.bai, checkIfExists: true)).
+            merge(Channel.fromPath(params.meta, checkIfExists: true))
+    }
+
+
+    splitbam_outch = SPLITBAM(input_ch)
 
     basecounts_outch = BASECOUNTS_SPLIT(params.ref, SPLITBAM.out.transpose())
 
@@ -276,7 +275,10 @@ workflow {
 
     CALLABLE_PERCT(params.ref, callable_inch)
 
-    gt_inch = splitbam_outch.join(variantcalling_outch).join(samplemeta_ch).transpose()
+    gt_inch = splitbam_outch.join(variantcalling_outch).join(input_ch.map {
+        sample_id, bam, bai, meta ->
+            tuple(sample_id, meta)
+    }).transpose()
 
     GENOTYPE_CELLS(params.ref, gt_inch)
 }
