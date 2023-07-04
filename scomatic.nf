@@ -190,6 +190,7 @@ process CALLABLESITES {
 
 
 process CALLABLE_PERCT {
+    label 'multicore'
     publishDir path: params.outdir, mode:'copy'
     tag "Sample: $sample_id; BAM: $bam"
 
