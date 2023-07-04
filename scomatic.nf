@@ -150,9 +150,19 @@ process VARIANTCALLING {
                 --editing \$editing \
                 --pon \$PON
 
+        # check chr prefix before intersecting
+        if [ \$(grep -c "^chr" \${output_dir4}/${sample_id}.calling.step2.tsv) -gt 1 ]
+        then
+            echo "Chr prefix detected"
+            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed"
+        else
+            echo "No chr prefix detected"
+            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker_nochr.bed"
+        fi
+        echo "Using \${repeat_bed} for hq genomic regions"
 
         bedtools intersect -header -a \${output_dir4}/${sample_id}.calling.step2.tsv \
-            -b /scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed | awk '\$1 ~ /^#/ || \$6 == "PASS"' > \${output_dir4}/${sample_id}.calling.step2.pass.tsv
+            -b \${repeat_bed} | awk '\$1 ~ /^#/ || \$6 == "PASS"' > \${output_dir4}/${sample_id}.calling.step2.pass.tsv
         """
 }
 
@@ -250,7 +260,7 @@ process GENOTYPE_CELLS {
 workflow {
 
     if (params.csv) {
-        input_ch = Channel.fromPath(params.csv).
+        input_ch = Channel.fromPath(params.csv, checkIfExists: true).
             splitCsv(header:true).
             map(row -> tuple "${row.sample_id}", "${row.bam}", "${row.bai}", "${row.metadata}")
     } else {        
