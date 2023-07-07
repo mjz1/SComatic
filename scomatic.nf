@@ -135,31 +135,31 @@ process VARIANTCALLING {
         output_dir4=${sample_id}/Step4_VariantCalling
         mkdir -p \$output_dir4
 
+        # check chr prefix before variant calling
+        if [ \$(grep -c -m 20 "^chr" ${outdir3}/${sample_id}.BaseCellCounts.AllCellTypes.tsv) -gt 3 ]
+        then
+            echo "Chr prefix detected"
+            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed"
+            editing=/scomatic/RNAediting/AllEditingSites.hg38.txt
+            PON=/scomatic/PoNs/PoN.scRNAseq.hg38.tsv
+        else
+            echo "No chr prefix detected"
+            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker_nochr.bed"
+            editing=/scomatic/RNAediting/AllEditingSites.hg38_nochr.txt
+            PON=/scomatic/PoNs/PoN.scRNAseq.hg38_nochr.tsv
+        fi
+
         python /scomatic/scripts/BaseCellCalling/BaseCellCalling.step1.py \
                 --infile ${outdir3}/${sample_id}.BaseCellCounts.AllCellTypes.tsv \
                 --outfile \${output_dir4}/${sample_id} \
                 --ref $ref
 
         # Step 4.2
-        editing=/scomatic/RNAediting/AllEditingSites.hg38.txt
-        PON=/scomatic/PoNs/PoN.scRNAseq.hg38.tsv
-
         python /scomatic/scripts/BaseCellCalling/BaseCellCalling.step2.py \
                 --infile \${output_dir4}/${sample_id}.calling.step1.tsv \
                 --outfile \${output_dir4}/${sample_id} \
                 --editing \$editing \
                 --pon \$PON
-
-        # check chr prefix before intersecting
-        if [ \$(grep -c "^chr" \${output_dir4}/${sample_id}.calling.step2.tsv) -gt 1 ]
-        then
-            echo "Chr prefix detected"
-            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker.bed"
-        else
-            echo "No chr prefix detected"
-            repeat_bed="/scomatic/bed_files_of_interest/UCSC.k100_umap.without.repeatmasker_nochr.bed"
-        fi
-        echo "Using \${repeat_bed} for hq genomic regions"
 
         bedtools intersect -header -a \${output_dir4}/${sample_id}.calling.step2.tsv \
             -b \${repeat_bed} | awk '\$1 ~ /^#/ || \$6 == "PASS"' > \${output_dir4}/${sample_id}.calling.step2.pass.tsv
