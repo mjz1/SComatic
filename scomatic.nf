@@ -19,7 +19,7 @@ log.info """\
     outdir      : ${params.outdir}
     bam         : ${params.bam}
     metadata    : ${params.meta}
-    sample_id    : ${params.sample_id}
+    sample_id   : ${params.sample_id}
     """
     .stripIndent()
 
@@ -58,7 +58,7 @@ process BASECOUNTS_SPLIT {
 
     input:
         path ref
-        tuple val(sample_id), path(bam), path(bai), path(outdir1)
+        tuple val(sample_id), path(bam), path(bai)
 
     output:
         tuple val(sample_id), path ("${sample_id}/Step2_BaseCellCounts/*.tsv"), optional: true
@@ -271,22 +271,64 @@ workflow {
             merge(Channel.fromPath(params.meta, checkIfExists: true))
     }
 
-
     splitbam_outch = SPLITBAM(input_ch)
 
-    basecounts_outch = BASECOUNTS_SPLIT(params.ref, SPLITBAM.out.transpose())
+    // Issue with scatter gather groupTuple blocking patterns:
+    // example discussion: https://github.com/nextflow-io/nextflow/issues/796
+    // Or https://groups.google.com/g/nextflow/c/fScdmB_w_Yw
+    // Solution: https://labs.epi2me.io/two-years-of-nextflow/ and https://gist.github.com/cjw85/d334352e49ddd2e8bf2bd8e3891f3fe5
 
-    mergecounts_outch = MERGECOUNTS(BASECOUNTS_SPLIT.out.groupTuple())
+    // Make an auxiliary chanel counting the number of cell types per sample 
+    // The groupKey is decorated by the number of BAMs for each cell type for each sample
+    // This should allow for non-blocked parallelized operations to proceed downstream
+    ct_counts = splitbam_outch
+        .map { sample_id, bams, bais, dir -> tuple(sample_id, groupKey(sample_id, bams.size()))}
+
+    // Split the per sample split sample bams intro multiple input channels to permit parallelization 
+    splitbam_outch
+        .map { sample_id, bams, bais, dir -> tuple( sample_id, bams, bais) }
+        .transpose()
+        .set { basecounts_inch }
+
+    basecounts_outch = BASECOUNTS_SPLIT(params.ref, basecounts_inch)
+
+    // Group the basecounts out based on our sample identifier
+    basecounts_outch
+        .groupTuple()
+        .set{grouped_ch}
+    
+    // Use the undecorated sample id to group, and then drop it to use the decorated key
+    ct_counts
+        .join(grouped_ch)
+        .map { samp_id, sample_key, files -> tuple(sample_key, files) }
+        .set{merge_inch}
+
+    mergecounts_outch = MERGECOUNTS(merge_inch)
 
     variantcalling_outch = VARIANTCALLING(params.ref, MERGECOUNTS.out)
 
     callablesites_outch = CALLABLESITES(VARIANTCALLING.out)
 
-    callable_inch = splitbam_outch.join(variantcalling_outch).transpose()
+    // Because the split bam channel lacks the decorated (keyed) sample id, we have to bring this back in thru joining
+    splitbam_outch
+        .join(ct_counts)
+        .map{ samp, bams, bais, dir, key -> tuple(key, bams, bais, dir) }
+        .set{splitbam_keyed}
+
+    splitbam_keyed
+        .join(variantcalling_outch)
+        .transpose()
+        .set{ callable_inch }
 
     CALLABLE_PERCT(params.ref, callable_inch)
 
-    gt_inch = splitbam_outch.join(variantcalling_outch).join(input_ch.map {
+    // Same with the original input channel -- create a keyed version
+    input_ch
+        .join(ct_counts)
+        .map{samp, bam, bai, meta, key -> tuple(key, bam, bai, meta)}
+        .set{input_ch_keyed}
+
+    gt_inch = splitbam_keyed.join(variantcalling_outch).join(input_ch_keyed.map {
         sample_id, bam, bai, meta ->
             tuple(sample_id, meta)
     }).transpose()
