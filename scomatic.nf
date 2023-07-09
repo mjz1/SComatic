@@ -74,6 +74,9 @@ process BASECOUNTS_SPLIT {
         temp="${sample_id}/Step2_BaseCellCounts/temp_\${cell_type}"
         mkdir -p \$temp
 
+        # Hack to ensure output file is emitted
+        touch "\${outdir}/${sample_id}.\$cell_type.tsv"
+
         # Command line to submit to cluster
         python /scomatic/scripts/BaseCellCounter/BaseCellCounter.py --bam $bam \
             --ref $ref \
@@ -286,30 +289,27 @@ workflow {
 
     // Split the per sample split sample bams intro multiple input channels to permit parallelization 
     splitbam_outch
-        .map { sample_id, bams, bais, dir -> tuple( sample_id, bams, bais) }
+        .map { sample_id, bams, bais, dir -> tuple(sample_id, bams, bais) }
         .transpose()
         .set { basecounts_inch }
 
     basecounts_outch = BASECOUNTS_SPLIT(params.ref, basecounts_inch)
 
-    // Group the basecounts out based on our sample identifier
+    // Merge the output channel indexed on the sized key and then group
     basecounts_outch
-        .groupTuple()
+        .combine(ct_counts, by: 0)
+        .map{samp, tsv, key -> tuple(key, tsv)}
+        .groupTuple(by: 0)
         .set{grouped_ch}
-    
-    // Use the undecorated sample id to group, and then drop it to use the decorated key
-    ct_counts
-        .join(grouped_ch)
-        .map { samp_id, sample_key, files -> tuple(sample_key, files) }
-        .set{merge_inch}
 
-    mergecounts_outch = MERGECOUNTS(merge_inch)
+    mergecounts_outch = MERGECOUNTS(grouped_ch)
 
     variantcalling_outch = VARIANTCALLING(params.ref, MERGECOUNTS.out)
 
     callablesites_outch = CALLABLESITES(VARIANTCALLING.out)
 
     // Because the split bam channel lacks the decorated (keyed) sample id, we have to bring this back in thru joining
+    // This might not actually matter at this point...
     splitbam_outch
         .join(ct_counts)
         .map{ samp, bams, bais, dir, key -> tuple(key, bams, bais, dir) }

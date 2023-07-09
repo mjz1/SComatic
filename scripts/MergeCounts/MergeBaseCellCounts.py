@@ -225,6 +225,12 @@ def main():
 
 	# Checking the number of tsv files in the folder
 	infiles = glob.glob(tsv_folder + '/*.tsv')
+ 
+	# Remove any files of size 0 from this list
+	# This is done because of the nextflow pipeline logic
+	for file_path in reversed(infiles):
+		if os.path.getsize(file_path) == 0:
+			infiles.remove(file_path)
 
 	if len(infiles) < 1:
 		raise RuntimeError('No tsv files found')
