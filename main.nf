@@ -68,7 +68,8 @@ process BASECOUNTS_SPLIT {
         outdir="${sample_id}/Step2_BaseCellCounts"
         mkdir -p \${outdir}
 
-        cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
+        cell_type=\$(basename "$bam" | sed "s/${sample_id}.//" | sed "s/.bam//")
+        echo \$cell_type
 
         # Temp folder
         temp="${sample_id}/Step2_BaseCellCounts/temp_\${cell_type}"
@@ -211,7 +212,7 @@ process CALLABLE_PERCT {
         output_dir6=${sample_id}/Step6_UniqueCellCallableSites
         mkdir -p \$output_dir6
 
-        cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
+        cell_type=\$(basename "$bam" | sed "s/${sample_id}.//" | sed "s/.bam//")
         echo \$cell_type
         
         temp=\$output_dir6/temp_\${cell_type}
@@ -244,8 +245,9 @@ process GENOTYPE_CELLS {
         output_dir7=${sample_id}/Step7_SingleCellAlleles
         mkdir -p \$output_dir7
 
-        cell_type=\$(basename $bam | awk -F'.' '{print \$(NF-1)}')
-        
+        cell_type=\$(basename "$bam" | sed "s/${sample_id}.//" | sed "s/.bam//")
+        echo \$cell_type
+
         temp=\$output_dir7/temp_\${cell_type}
         mkdir -p \$temp
 
