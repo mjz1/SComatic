@@ -23,6 +23,11 @@ pip install -r requirements.txt
 ```R
 Rscript r_requirements_install.R
 ```
+If your R version is >= 3.6.0 but < 4, you might have issues installing the `VGAM` package. If this is the case, try this:
+```R
+Rscript r_requirements_install.v3_6.R
+```
+
 - Unpack PoN (Panel of Normals) files:
 ```
 gunzip PoNs/PoN.scRNAseq.hg38.tsv.gz
@@ -102,7 +107,7 @@ In addition to the cell-type specific bam files, this script creates a txt (\*.r
 - **Example:** check [here](/docs/SComaticExample.md) to see how to run this step with an example sample.  
 
 ## Step 2: Collecting base count information
-Base count information for each cell type and for every position if the genome is recorded in a base count matrix indexed by cell types and genomic coordinates. 
+Base count information for each cell type and for every position in the genome is recorded in a base count matrix indexed by cell types and genomic coordinates. 
 
 The command line to run this step is: 
 
