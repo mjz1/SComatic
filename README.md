@@ -23,6 +23,11 @@ pip install -r requirements.txt
 ```R
 Rscript r_requirements_install.R
 ```
+If your R version is >= 3.6.0 but < 4, you might have issues installing the `VGAM` package. If this is the case, try this:
+```R
+Rscript r_requirements_install.v3_6.R
+```
+
 - Unpack PoN (Panel of Normals) files:
 ```
 gunzip PoNs/PoN.scRNAseq.hg38.tsv.gz
@@ -102,7 +107,7 @@ In addition to the cell-type specific bam files, this script creates a txt (\*.r
 - **Example:** check [here](/docs/SComaticExample.md) to see how to run this step with an example sample.  
 
 ## Step 2: Collecting base count information
-Base count information for each cell type and for every position if the genome is recorded in a base count matrix indexed by cell types and genomic coordinates. 
+Base count information for each cell type and for every position in the genome is recorded in a base count matrix indexed by cell types and genomic coordinates. 
 
 The command line to run this step is: 
 
@@ -287,6 +292,7 @@ SComatic provides the following additional functionalities, which are described 
 - Computing the number of callable sites per cell type
 - Computing the number of callable sites per cell
 - Computing the genotype for each cell at the variant sites
+- Computing the trinucleotide context background
 
 ## [FAQs - Frequently asked questions](/docs/faqs.md)
 This section answers some of the users' most recurrent doubts when running SComatic.
@@ -297,6 +303,7 @@ This section answers some of the users' most recurrent doubts when running SComa
 4. [Can we use the calls from other callers to genotype unique cells using SComatic?](/docs/faqs.md#4-can-we-use-the-calls-from-other-callers-to-genotype-unique-cells-using-scomatic)
 5. [How do different cell type labels (e.g. different levels of granularity) affect the SComatic performance?](docs/faqs.md#5-how-do-different-cell-type-labels-eg-different-levels-of-granularity-affect-the-scomatic-performance)
 6. [What does it happen if CellRanger does not properly trim all non-genomic sequences (adapters) from the reads?](/docs/faqs.md#6-what-does-it-happen-if-cellranger-does-not-properly-trim-all-non-genomic-sequences-adapters-from-the-reads)
+7. [How to interpret the SingleCellGenotype.py output?](https://github.com/cortes-ciriano-lab/SComatic/blob/main/docs/faqs.md#7-how-to-interpret-the-singlecellgenotypepy-output)
 
 ## Contact
 If you have any comments or suggestions about SComatic please raise an issue or contact us: 

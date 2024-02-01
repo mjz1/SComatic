@@ -34,13 +34,12 @@ def main():
 	in_tsv = args.in_tsv
 	outfile = args.out_file
 
-	# in_tsv = '/nfs/research/icortes/DATA/scRNA_somatic_variant_calling/DATA/Li_Cell2020_cSCC/results/step1.targeted_regions.files.tsv'
-	# outfile = '/nfs/research/icortes/DATA/scRNA_somatic_variant_calling/DATA/Li_Cell2020_cSCC/results/test.tsv'
-
 	# Temp file and folder
 	temp = outfile + '.temp'
 	temp_folder=os.path.dirname(outfile)
-
+	if (temp_folder == ''):
+		temp_folder = "."
+	
 	# 1. Concatenate and create temp calling file
 	print ('-----------------------------------------------------------')
 	print ('1. Preparing temp file...')
@@ -81,7 +80,6 @@ def main():
 
 			print (line)
 			
-			#print (UP, DOWN)
 			try:
 				if (longestRun(UP) < 4 and longestRun(DOWN) < 4):
 					UP_base = UP[-1]
@@ -109,11 +107,11 @@ def main():
 	df.rename({0: 'Count'}, axis=1, inplace=True)
 	df.to_csv(outfile, index=False)
 
-	# # Remove temp file
-	# os.remove(temp)
+	# Remove temp file
+	os.remove(temp)
 
 # -------------------------
-# PoN construction
+# Main computation
 # -------------------------
 if __name__ == '__main__':
 	start = timeit.default_timer()

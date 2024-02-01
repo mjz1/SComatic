@@ -105,3 +105,26 @@ optional arguments:
 ```
 
 **Example:** check [here](/docs/SComaticExample.md) to see how to run this script with an example sample.  
+
+Description of the output [here](https://github.com/cortes-ciriano-lab/SComatic/blob/main/docs/faqs.md#7-how-to-interpret-the-singlecellgenotypepy-output)
+
+## Computing the trinucleotide context background
+
+```
+python scripts/TrinucleotideBackground/TrinucleotideContextBackground.py --help
+usage: TrinucleotideContextBackground.py [-h] --in_tsv IN_TSV --out_file
+                                         OUT_FILE
+
+Script to obtain trincucleotide context background
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --in_tsv IN_TSV      File listing the tsv files to be used for the
+                       trinucleotide context background computation (files
+                       obtained in BaseCellCalling.step1.py)
+  --out_file OUT_FILE  Output file
+
+```
+
+**Example:** check [here](/docs/SComaticExample.md) to see how to run this script with an example sample.  
+
