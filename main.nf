@@ -263,6 +263,40 @@ process GENOTYPE_CELLS {
         """
 }
 
+process TRINUC_BACKGROUND {
+    publishDir path: params.outdir, mode:'copy'
+    tag "Sample: $sample_id"
+
+    input:
+        tuple val(sample_id), path(tsvs)
+
+    output:
+        path("${sample_id}/Step8_TrinucBackground/*.tsv")
+
+    script:
+        """
+        output_dir8=${sample_id}/Step8_TrinucBackground/
+
+        mkdir -p \$output_dir8
+
+        tsv_in="\$output_dir8/in.tsv"
+
+        touch \$tsv_in
+
+        # Create the input tsv list
+        for tsv in ${tsvs}; do
+            if [[ -s "\$tsv" ]]; then
+                echo -e "\$tsv" >> "\$tsv_in"
+            fi
+        done
+
+        tsv_out="\$output_dir8/${sample_id}_tnb.tsv"
+
+        python /scomatic/scripts/TrinucleotideBackground/TrinucleotideContextBackground.py --in_tsv \$tsv_in  \
+            --out_file \$tsv_out
+        """
+}
+
 workflow {
 
     if (params.csv) {
@@ -336,6 +370,8 @@ workflow {
     }).transpose()
 
     GENOTYPE_CELLS(params.ref, gt_inch)
+
+    TRINUC_BACKGROUND(grouped_ch)
 }
 
 
