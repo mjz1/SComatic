@@ -29,8 +29,5 @@ RUN gunzip -c PoNs/PoN.scRNAseq.hg38_nochr.tsv.gz > PoNs/PoN.scRNAseq.hg38_nochr
 RUN gunzip -c PoNs/PoN.scATACseq.hg38_nochr.tsv.gz > PoNs/PoN.scATACseq.hg38_nochr.tsv
 RUN gunzip -c RNAediting/AllEditingSites.hg38_nochr.txt.gz > RNAediting/AllEditingSites.hg38_nochr.txt
 
-RUN gunzip -c example_data/chr10.fa.gz > example_data/chr10.fa
-RUN samtools faidx example_data/chr10.fa
-
 # Workaround to ensure our environment is active within singularity
 ENV PATH "$MAMBA_ROOT_PREFIX/bin:$PATH"
