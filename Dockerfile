@@ -8,9 +8,9 @@ USER root
 ARG MAMBA_DOCKERFILE_ACTIVATE=1  # (otherwise python will not be found)
 
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    zlib1g-dev \
-    libcrypt-dev \
+    gcc \
+    g++ \
+    gfortran \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ./ /scomatic
