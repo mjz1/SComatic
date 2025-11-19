@@ -34,6 +34,11 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: zatzmanm/scomatic
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
